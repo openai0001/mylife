@@ -1,13 +1,14 @@
 
 'use client';
 
+import { HumanMessage } from '@langchain/core/messages';
 import { RemoteRunnable } from "@langchain/core/runnables/remote";
 import { Typography } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-
 const { Paragraph, Title } = Typography;
+
 export default function Home() {
   const router = useRouter();
   const pathname = usePathname();
@@ -20,19 +21,25 @@ export default function Home() {
     const fetchData = async () => {
       try {
         const remoteChain = new RemoteRunnable({
-          url: 'http://localhost:8000/test',
+          url: 'http://localhost:8000/test_graph',
         });
-        const eventStream = remoteChain.streamEvents({ input },{
-          version: "v2",
+        const messages = [new HumanMessage({ content: input })]
+        const eventStream = remoteChain.streamEvents({ "messages": messages }, {
+          version: "v1",
         });
         let chunks = ""
+        const node_set = new Set()
         for await (const event of eventStream) {
-          console.log(event)
-          if (event.event === "on_chat_model_stream") {
-            bufferRef.current += event.data.chunk.content; // 累积所有 chunks
-            setMarkdownContent(bufferRef.current);
+          if (event.event === "on_chain_stream" && event.data.chunk.messages) {
+            console.log(node_set,event.name)
+            if (!node_set.has(event.name)) {
+              node_set.add(event.name)
+              console.log(event.data.chunk.messages[0].content, event.name)
+              bufferRef.current += event.data.chunk.messages[0].content; // 累积所有 chunks
+              setMarkdownContent(bufferRef.current);
+            }
           }
-         }
+        }
 
       } catch (error) {
         console.log("error fetching data", error);

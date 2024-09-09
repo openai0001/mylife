@@ -1,12 +1,12 @@
 
 'use client';
 
+import { HumanMessage } from '@langchain/core/messages';
 import { RemoteRunnable } from "@langchain/core/runnables/remote";
 import { Typography } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-
 const { Paragraph, Title } = Typography;
 export default function Home() {
   const router = useRouter();
@@ -20,10 +20,14 @@ export default function Home() {
     const fetchData = async () => {
       try {
         const remoteChain = new RemoteRunnable({
-          url: 'http://localhost:8000/test',
+          url: 'http://localhost:8000/life',
         });
-        const eventStream = remoteChain.streamEvents({ input },{
-          version: "v2",
+        const messages = [new HumanMessage({content:input})]
+        const eventStream = remoteChain.streamEvents(messages,{
+          version: "v1",
+          metadata: {
+            conversation_id: "youht-default",
+          },
         });
         let chunks = ""
         for await (const event of eventStream) {
